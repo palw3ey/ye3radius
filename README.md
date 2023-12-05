@@ -154,6 +154,25 @@ docker build --no-cache --network=host -t ye3radius .
 docker run -dt --name my_customized_radius ye3radius
 ```
 
+# Documentation
+
+[radiusd man page](https://freeradius.org/radiusd/man/)
+
+# Version
+
+| name | version |
+| :- |:- |
+|ye3tftp | 1.0.0 |
+|radiusd | 3.0.26 |
+|alpine | 3.18.4 |
+
+# ToDo
+
+- need to document env variables
+- add more translation files in i18n folder. Contribute ! Send me your translations by mail ;)
+
+Don't hesitate to send me your contributions, issues, improvements on github or by mail.
+
 # License
 
 MIT  
