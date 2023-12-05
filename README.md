@@ -4,7 +4,7 @@ A docker AAA Radius server based on Freeradius and Alpine for a MySQL DB. Below 
 
 The /etc/raddb folder is persistent.
 
-# Quickstart
+# Simple usage
 
 ```bash
 docker run -dt --name myradius -e Y_TEST_NAS=yes -e Y_TEST_USER=yes palw3ey/ye3radius
