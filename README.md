@@ -114,33 +114,33 @@ To run through GNS3, download and import the appliance : [ye3radius.gns3a](https
 
 These are the env variables and their default values.  
 
-| variables | format | default |
-| :- |:- |:- |
-|Y_LANGUAGE | text | fr_FR |
-|Y_DEBUG | yes/no | no |
-|Y_IGNORE_CONFIG | yes/no | no |
-|Y_PORT_AUTH | port number | 1812 |
-|Y_PORT_ACCT | port number | 1813 |
-|Y_CERT_DAYS | integer | 3650 |
-|Y_CERT_KEEP | yes/no | yes |
-|Y_TEST_NAS | yes/no | no |
-|Y_TEST_NAS_ADDRESS | ip address | 0.0.0.0/0 |
-|Y_TEST_NAS_SECRET | password | Test10203040 |
-|Y_TEST_USER | yes/no | no |
-|Y_TEST_USER_USERNAME | name | test |
-|Y_TEST_USER_PASSWORD | password | 1234 |
-|Y_DB_ENABLE | yes/no | no |
-|Y_DB_SERVER | address | example.com |
-|Y_DB_PORT | port number | 3306 |
-|Y_DB_LOGIN | name | login |
-|Y_DB_PASSWORD | password | password |
-|Y_DB_RADIUS_DB | text | radius |
-|Y_DB_TLS_REQUIRED | yes/no | no |
-|Y_DB_READ_CLIENTS | yes/no | yes |
-|Y_DB_AUTHORIZE | yes/no | yes |
-|Y_DB_POSTAUTH | yes/no | yes |
-|Y_DB_ACCOUNTING | yes/no | yes |
-|Y_DB_WAIT | integer | 5 |
+| variables | format | default | description |
+| :- |:- |:- |:- |
+|Y_LANGUAGE | text | fr_FR | Language. The list is in the folder /i18n/ |
+|Y_DEBUG | yes/no | no | yes, Run freeradius with debug (-X) option |
+|Y_IGNORE_CONFIG | yes/no | no | yes, To not apply file changes in the /etc/raddb/ folder. A good option if you use a custom /etc/raddb folder mounted from outside |
+|Y_PORT_AUTH | port number | 1812 | Authentication port |
+|Y_PORT_ACCT | port number | 1813 | Accounting port |
+|Y_CERT_DAYS | integer | 3650 | Certificate expiration date in days |
+|Y_CERT_KEEP | yes/no | yes | yes, To avoid recreating the certificates if already exist | 
+|Y_TEST_NAS | yes/no | no | yes, To activate the test NAS |
+|Y_TEST_NAS_ADDRESS | ip address | 0.0.0.0/0 | Test NAS address |
+|Y_TEST_NAS_SECRET | password | Test10203040 | Test NAS secret |
+|Y_TEST_USER | yes/no | no | yes, To activate the test user |
+|Y_TEST_USER_USERNAME | name | test | Test user username |
+|Y_TEST_USER_PASSWORD | password | 1234 | Test user password |
+|Y_DB_ENABLE | yes/no | no | yes, To enable SQL |
+|Y_DB_SERVER | address | example.com | SQL server address |
+|Y_DB_PORT | port number | 3306 | SQL server port |
+|Y_DB_LOGIN | name | login | SQL server login |
+|Y_DB_PASSWORD | password | password | SQL server password |
+|Y_DB_RADIUS_DB | text | radius | SQL database to use |
+|Y_DB_TLS_REQUIRED | yes/no | no | yes, To connect to the SQL server with ssl option |
+|Y_DB_READ_CLIENTS | yes/no | yes | yes, To read NAS from SQL nas table |
+|Y_DB_AUTHORIZE | yes/no | yes | yes, To allow auth from SQL |
+|Y_DB_POSTAUTH | yes/no | yes | yes, To allow SQL postauth |
+|Y_DB_ACCOUNTING | yes/no | yes | yes, To allow SQL accounting |
+|Y_DB_WAIT | integer | 5 | Number of seconds to wait between each attempt to reach the SQL server when the ye3radius container starts |
 
 # Build
 
@@ -168,7 +168,7 @@ docker run -dt --name my_customized_radius ye3radius
 
 # ToDo
 
-- need to document env variables
+- ~~need to document env variables~~
 - add more translation files in i18n folder. Contribute ! Send me your translations by mail ;)
 
 Don't hesitate to send me your contributions, issues, improvements on github or by mail.
