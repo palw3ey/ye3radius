@@ -106,6 +106,59 @@ radius server ye3radius
 do test aaa group radius server name ye3radius test 1234 new-code
 ```
 
+# HOWTOs
+- Show freeradius log
+```bash
+docker exec -it myradius sh --login -c "tail -f /var/log/radius/radius.log"
+```
+
+- Connect to DB
+```bash
+mysql --host=example.com --port=3306 --user=login --password=password --database=radius
+```
+
+- Add a user
+```sql
+INSERT INTO radcheck
+	(username, attribute, op, value)
+VALUES
+	('user', 'Cleartext-Password', ':=', 'password');
+```
+
+- Delete a user
+```sql
+DELETE FROM radcheck
+WHERE username = 'user';
+```
+
+- Update a user password
+```sql
+UPDATE radcheck
+SET value='password'
+WHERE username='user';
+```
+
+- Disable a user
+```sql
+INSERT INTO radcheck
+	(username, attribute, op, value)
+VALUES
+	('user', 'Auth-Type', ':=', 'Reject');
+```
+
+- Enable a previously disabled user
+```sql
+DELETE FROM radcheck
+WHERE username='user'
+AND attribute='Auth-Type'
+AND value='Reject';
+```
+
+- List all user
+```sql
+SELECT * FROM radcheck;
+```
+
 # GNS3
 
 To run through GNS3, download and import the appliance : [ye3radius.gns3a](https://raw.githubusercontent.com/palw3ey/ye3radius/master/ye3radius.gns3a)
@@ -168,7 +221,7 @@ docker run -dt --name my_customized_radius ye3radius
 
 # ToDo
 
-- ~~need to document env variables~~
+- ~~need to document env variables~~ (2023-12-12)
 - add more translation files in i18n folder. Contribute ! Send me your translations by mail ;)
 
 Don't hesitate to send me your contributions, issues, improvements on github or by mail.
