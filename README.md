@@ -215,7 +215,7 @@ docker run -dt --name my_customized_radius ye3radius
 
 | name | version |
 | :- |:- |
-|ye3tftp | 1.0.0 |
+|ye3radius | 1.0.0 |
 |radiusd | 3.0.26 |
 |alpine | 3.18.4 |
 
