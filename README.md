@@ -195,6 +195,20 @@ These are the env variables and their default values.
 |Y_DB_ACCOUNTING | yes/no | yes | yes, To allow SQL accounting |
 |Y_DB_WAIT | integer | 5 | Number of seconds to wait between each attempt to reach the SQL server when the ye3radius container starts |
 
+# Compatibility
+
+The docker image was compiled to work on these CPU architectures :
+
+- linux/386
+- linux/amd64
+- linux/arm/v6
+- linux/arm/v7
+- linux/arm64
+- linux/ppc64le
+- linux/s390x
+
+Work on most computers including Raspberry Pi
+
 # Build
 
 To customize and create your own images.
