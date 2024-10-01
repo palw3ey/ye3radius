@@ -1,0 +1,34 @@
+# LABEL name="ye3radius" version="1.0.0" author="palw3ey" maintainer="palw3ey" email="palw3ey@gmail.com" website="https://github.com/palw3ey/ye3radius" license="MIT" create="20231201" update="20231201"
+
+# These values will override docker env variables. To activate, rename the file /etc/profile.d/bypass_docker_env.sh.dis to /etc/profile.d/bypass_docker_env.sh
+
+# general
+export Y_LANGUAGE=fr_FR
+export Y_DEBUG=no
+export Y_IGNORE_CONFIG=no
+export Y_PORT_AUTH=1812
+export Y_PORT_ACCT=1813
+export Y_CERT_DAYS=3650
+export Y_CERT_KEEP=yes
+
+# test credentials
+export Y_TEST_NAS=no
+export Y_TEST_NAS_ADDRESS=0.0.0.0/0
+export Y_TEST_NAS_SECRET=Test10203040
+export Y_TEST_USER=no
+export Y_TEST_USER_USERNAME=test
+export Y_TEST_USER_PASSWORD=1234
+
+# mysql db
+export Y_DB_ENABLE=no
+export Y_DB_SERVER=example.com
+export Y_DB_PORT=3306
+export Y_DB_LOGIN=login
+export Y_DB_PASSWORD=password
+export Y_DB_RADIUS_DB=radius
+export Y_DB_TLS_REQUIRED=no
+export Y_DB_READ_CLIENTS=yes
+export Y_DB_AUTHORIZE=yes
+export Y_DB_POSTAUTH=yes
+export Y_DB_ACCOUNTING=yes
+export Y_DB_WAIT=5

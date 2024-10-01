@@ -1,0 +1,19 @@
+{
+    "name": "ye3radius",
+    "category": "guest",
+    "description": "A docker AAA Radius server based on Freeradius and Alpine for a MySQL DB. Below 20 Mb. GNS3 ready.",
+    "vendor_name": "palw3ey",
+    "vendor_url": "https://github.com/palw3ey/ye3radius",
+    "product_name": "ye3radius",
+    "registry_version": 4,
+    "status": "stable",
+    "maintainer": "palw3ey",
+    "maintainer_email": "palw3ey@gmail.com",
+    "usage": "The directory /etc/raddb is persistent. Useful env :\nY_TEST_NAS=yes\nY_TEST_NAS_ADDRESS=0.0.0.0/0\nY_TEST_NAS_SECRET=Test10203040\nY_TEST_USER=yes\nY_TEST_USER_USERNAME=test\nY_TEST_USER_PASSWORD=1234\n\nDocumentation : https://github.com/palw3ey/ye3radius",
+    "symbol": "linux_guest.svg",
+    "docker": {
+        "adapters": 1,
+        "image": "palw3ey/ye3radius",
+        "console_type": "telnet"
+    }
+}
