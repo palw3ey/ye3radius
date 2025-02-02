@@ -18,7 +18,7 @@ If you already have a Radius DB with data, then skip to step 7.
 
 1. Create MariaDB container
 ```bash
-docker run -dt --name mymariadb -e MYSQL_ROOT_PASSWORD=mypass mariadb:latest
+docker run -dt --name mymariadb -e MYSQL_ROOT_PASSWORD=mypass -p 3306:3306 mariadb:latest
 ```
 
 2. Create Radius database and Radius DB user
