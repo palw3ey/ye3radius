@@ -1,7 +1,7 @@
 {
     "name": "ye3radius",
     "category": "guest",
-    "description": "A docker AAA Radius server based on Freeradius and Alpine for a MySQL DB. Below 20 Mb. GNS3 ready.",
+    "description": "AAA Radius, RadSec and RadSec Proxy server based on Freeradius and Alpine for SQL DB. GNS3 ready",
     "vendor_name": "palw3ey",
     "vendor_url": "https://github.com/palw3ey/ye3radius",
     "product_name": "ye3radius",

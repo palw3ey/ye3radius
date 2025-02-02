@@ -3,7 +3,7 @@
 # language : fr_FR
 # translation by : palw3ey <palw3ey@gmail.com>
 # create : 20231201
-# update : 20231201
+# update : 20250201
 
 i_apply_configuration="appliquer la configuration"
 i_comment="commenter"
@@ -20,3 +20,4 @@ i_set="définir"
 i_start="démarrer"
 i_waiting_for_SQL_server="en attente du serveur SQL..."
 i_with_debug_option="avec option de débogage"
+i_finished="terminé"
