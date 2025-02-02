@@ -213,4 +213,5 @@ home_server_pool tls {
 
 realm tls {
       auth_pool = tls
+      acct_pool = tls
 }

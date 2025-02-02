@@ -7,7 +7,7 @@ The /etc/raddb folder is persistent.
 # Simple usage
 
 ```bash
-docker run -dt --name myradius -e Y_TEST_NAS=yes -e Y_TEST_USER=yes docker.io/palw3ey/ye3radius
+docker run -dt --name myradius -e Y_TEST_NAS=yes -e Y_TEST_USER=yes -p 1812-1813:1812-1813/udp docker.io/palw3ey/ye3radius
 ```
 
 # Usage with MariaDB 
@@ -48,7 +48,7 @@ mariadb --host=$mymariadb_ip --port=3306 --user=radiusDBuser --password=radiusDB
 4. Create a NAS client  
 The nas_address, below, is the IP address of the host that is requesting authentication. Use 0.0.0.0/0 to allow any IP address.
 ```bash
-nas_address="10.10.10.10"
+nas_address="0.0.0.0/0"
 nas_secret="strongSecret"
 mariadb --host=$mymariadb_ip --port=3306 --user=radiusDBuser --password=radiusDBpassword --database=radius -e "INSERT INTO  nas (nasname,shortname,type,ports,secret,server,community,description) VALUES ('"$nas_address"', 'nas access sql', 'other',NULL ,'"$nas_secret"',NULL ,NULL ,'RADIUS Client');"
 ```
@@ -77,7 +77,11 @@ quit;
 7. Run  
 In the first run the ye3radius container will creates certificates if not exist, this may take a couple of seconds or minutes before the Radius service get ready
 ```bash
-docker run -dt --name myradius -e Y_DB_ENABLE=yes -e Y_DB_SERVER=example.lan -e Y_DB_PORT=3306 -e Y_DB_LOGIN=radiusDBuser -e Y_DB_PASSWORD=radiusDBpassword -e Y_DB_TLS_REQUIRED=no palw3ey/ye3radius
+docker run -dt --name myradius -e Y_DB_ENABLE=yes \
+	-e Y_DB_SERVER=$mymariadb_ip -e Y_DB_PORT=3306 -e Y_DB_TLS_REQUIRED=no \
+	-e Y_DB_LOGIN=radiusDBuser -e Y_DB_PASSWORD=radiusDBpassword \
+	-p 1812-1813:1812-1813/udp \
+	palw3ey/ye3radius
 ```
 
 8. Test
@@ -86,11 +90,11 @@ docker run -dt --name myradius -e Y_DB_ENABLE=yes -e Y_DB_SERVER=example.lan -e 
 docker logs myradius
 
 # get container IP :
-container_ip=$(docker inspect --format='{{.NetworkSettings.IPAddress}}' myradius)
+myradius_ip=$(docker inspect --format='{{.NetworkSettings.IPAddress}}' myradius)
 
 # On a ubuntu host :
 apt install freeradius-utils
-radtest $employee_username $employee_password $container_ip:1812 0 $nas_secret -x
+radtest $employee_username $employee_password $myradius_ip:1812 0 $nas_secret -x
 ```
 
 # Test
@@ -120,7 +124,7 @@ docker exec -it myradius tail -f /var/log/radius/radius.log
 
 - Connect to DB
 ```bash
-mysql --host=example.com --port=3306 --user=login --password=password --database=radius
+mysql --host=$mymariadb_ip --port=3306 --user=radiusDBuser --password=radiusDBpassword --database=radius
 ```
 
 - Add a user
@@ -128,20 +132,20 @@ mysql --host=example.com --port=3306 --user=login --password=password --database
 INSERT INTO radcheck
 	(username, attribute, op, value)
 VALUES
-	('user', 'Cleartext-Password', ':=', 'password');
+	('emily', 'Cleartext-Password', ':=', 'emilyStrongPassword');
 ```
 
 - Delete a user
 ```sql
 DELETE FROM radcheck
-WHERE username = 'user';
+WHERE username = 'emily';
 ```
 
 - Update a user password
 ```sql
 UPDATE radcheck
-SET value='password'
-WHERE username='user';
+SET value='emilyNewStrongPassword'
+WHERE username='emily';
 ```
 
 - Disable a user
@@ -149,13 +153,13 @@ WHERE username='user';
 INSERT INTO radcheck
 	(username, attribute, op, value)
 VALUES
-	('user', 'Auth-Type', ':=', 'Reject');
+	('emily', 'Auth-Type', ':=', 'Reject');
 ```
 
 - Enable a previously disabled user
 ```sql
 DELETE FROM radcheck
-WHERE username='user'
+WHERE username='emily'
 AND attribute='Auth-Type'
 AND value='Reject';
 ```
@@ -165,9 +169,9 @@ AND value='Reject';
 SELECT * FROM radcheck;
 ```
 
-- Add user to group
+- Add the user emily to a group named Manager
 ```sql
-INSERT INTO radusergroup (username, groupname) VALUES ('tux', 'Manager');
+INSERT INTO radusergroup (username, groupname) VALUES ('emily', 'Manager');
 ```
 
 - Add the Class attribute in the response, for group membership
@@ -177,11 +181,11 @@ INSERT INTO radgroupreply (groupname, attribute, op, value) VALUES ('Manager', '
 
 - Enable RadSec Server
 ```bash
-# just add : -e Y_RADSEC_SERVER_ENABLE=yes
-docker run -dt --name myradius \
-	-e Y_DB_ENABLE=yes -e Y_DB_SERVER=example.lan -e Y_DB_PORT=3306 -e Y_DB_TLS_REQUIRED=no \
+# just add : -e Y_RADSEC_SERVER_ENABLE=yes -p 2083:2083/tcp
+docker run -dt --name myradius -e Y_DB_ENABLE=yes \
+	-e Y_DB_SERVER=$mymariadb_ip -e Y_DB_PORT=3306 -e Y_DB_TLS_REQUIRED=no \
 	-e Y_DB_LOGIN=radiusDBuser -e Y_DB_PASSWORD=radiusDBpassword \
-	-e Y_RADSEC_SERVER_ENABLE=yes \
+	-e Y_RADSEC_SERVER_ENABLE=yes -p 2083:2083/tcp \
 	palw3ey/ye3radius
 ```
 
@@ -192,35 +196,65 @@ docker run -dt --name myradius \
 (docker exec -it myradius cat /etc/raddb/certs/client.crt) > client.crt
 (docker exec -it myradius cat /etc/raddb/certs/ca.pem) > ca.pem
 
+# get the ip
+myradius_ip=$(docker inspect --format='{{.NetworkSettings.IPAddress}}' myradius)
+echo $myradius_ip
+
 # create the Radius Proxy with the previous files
 docker run -dt --name myradius_proxy \
+	-p 1812-1813:1812-1813/udp \
 	-e Y_RADSEC_PROXY_ENABLE=yes \
-	-e Y_RADSEC_PROXY_IPADDR=RemoteRadSecServerIP \
+	-e Y_RADSEC_PROXY_IPADDR=$myradius_ip \
 	-e Y_RADSEC_PROXY_CLIENT_SECRET=strongProxySecret \
-	-v ~/client.key:/etc/raddb/certs/proxy_client.key \
-	-v ~/client.crt:/etc/raddb/certs/proxy_client.crt \
-	-v ~/ca.pem:/etc/raddb/certs/proxy_ca.pem \
+	-v ~/client.key:/etc/raddb/certs/proxy_client.key:ro \
+	-v ~/client.crt:/etc/raddb/certs/proxy_client.crt:ro \
+	-v ~/ca.pem:/etc/raddb/certs/proxy_ca.pem:ro \
 	docker.io/palw3ey/ye3radius 
 ```
 
-- Test with radclient with custom attributes
+- Test with radclient using custom attributes
 ```bash
 # install freeradius-utils
 sudo apt install freeradius-utils
 
-radclient -x RadiusProxyIP:1812 auth strongProxySecret <<EOF
-User-Name = "tux"
-User-Password = "strongPassword"
+# get the ip
+myradius_proxy_ip=$(docker inspect --format='{{.NetworkSettings.IPAddress}}' myradius_proxy)
+echo $myradius_proxy_ip
+
+# test authentication
+radclient -x $myradius_proxy_ip:1812 auth strongProxySecret <<EOF
+User-Name = "emily"
+User-Password = "emilyStrongPassword"
+NAS-IP-Address = 192.168.1.2
+EOF
+
+# verify authentication
+mariadb --host=$mymariadb_ip --port=3306 --user=radiusDBuser --password=radiusDBpassword --database=radius -e "SELECT username, packet_src_ip_address, authdate FROM radpostauth ORDER BY id DESC LIMIT 2;"
+
+# test accounting
+radclient -x $myradius_proxy_ip:1813 acct strongProxySecret <<EOF
+User-Name = "emily"
 NAS-IP-Address = 192.168.1.2
 Framed-IP-Address = 192.168.1.3
+Acct-Status-Type = Start
+Acct-Session-Id = 123456789
 EOF
+
+# verify accounting
+mariadb --host=$mymariadb_ip --port=3306 --user=radiusDBuser --password=radiusDBpassword --database=radius -e "SELECT radacctid, acctsessionid, acctstarttime, framedipaddress FROM radacct ORDER BY radacctid DESC LIMIT 2;"
 ```
+
+- Test on Windows  
+[Download NTRadPing](https://community.microfocus.com/cfs-file/__key/communityserver-wikis-components-files/00-00-00-01-70/ntradping.zip)
+
+- Manage radius database using a web interface  
+[ye3radius-frontend by Kilowatt-W](https://github.com/palw3ey/ye3radius-frontend)
 
 # GNS3
 
 To run through GNS3, download and import the appliance : [ye3radius.gns3a](https://raw.githubusercontent.com/palw3ey/ye3radius/master/ye3radius.gns3a)
 
-## How to connect the docker container in the GNS3 topology ?
+## How to connect the container in the GNS3 topology ?
 Drag and drop the device in the topology. Right click on the device and select "Edit config".  
 If you want a static configuration, uncomment the lines just below `# Static config for eth0` or otherwise `# DHCP config for eth0` for a dhcp configuration. Click "Save".  
 Add a link to connect the device to a switch or router. Finally, right click on the device, select "Start".  
@@ -314,12 +348,15 @@ docker run -dt --name my_customized_radius ye3radius
 
 | name | version |
 | :- |:- |
-|ye3radius | 2.0.0 |
+|ye3radius | 2.0.1 |
 |radiusd | 3.0.27 |
 |alpine | 3.21.2 |
 
 # Changelog
 
+## [2.0.1] - 2025-02-02
+### Fixed
+- add acct_pool in radsec_proxy site
 ## [2.0.0] - 2025-02-02
 ### Added
 - Ease of configuration for RadSec and Radius Proxy 
