@@ -245,7 +245,7 @@ mariadb --host=$mymariadb_ip --port=3306 --user=radiusDBuser --password=radiusDB
 [Download NTRadPing](https://community.microfocus.com/cfs-file/__key/communityserver-wikis-components-files/00-00-00-01-70/ntradping.zip)
 
 - Manage radius database via a frontend  
-[ye3radius-frontend by Kilowatt-W](https://github.com/Kilowatt-W/ye3radius-frontend)
+[ye3radius-frontend by Kilowatt-W](https://github.com/palw3ey/ye3radius-frontend)
 
 # GNS3
 
