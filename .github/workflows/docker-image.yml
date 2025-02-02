@@ -40,10 +40,10 @@ jobs:
           push: true
           tags: |
             palw3ey/ye3radius:latest
-            palw3ey/ye3radius:2.0.0
+            palw3ey/ye3radius:2.0.1
             ghcr.io/palw3ey/ye3radius:latest
-            ghcr.io/palw3ey/ye3radius:2.0.0
+            ghcr.io/palw3ey/ye3radius:2.0.1
             quay.io/palw3ey/ye3radius:latest
-            quay.io/palw3ey/ye3radius:2.0.0
+            quay.io/palw3ey/ye3radius:2.0.1
           cache-from: type=gha
           cache-to: type=gha,mode=max
