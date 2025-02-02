@@ -1,0 +1,216 @@
+######################################################################
+#
+#  RADIUS over TLS (radsec)
+#
+#  When a request is proxied to a TLS-enabled home server,
+#  the TLS parameters are available via the expansion:
+#
+#	%{proxy_listen: ... }
+#
+#  The contents of the expansion are the same as described
+#  above with the %{listen: ... } expansion, and have similar
+#  meanings.  "client" in this case is the proxy (this system)
+#  and "server" is the remote system (home server).
+#
+#  Note that the %{proxy_listen: ... } parameters are available
+#  only AFTER the connection has been made to the home server.
+#
+home_server tls {
+#ENV.Y_RADSEC_PROXY_IPADDR
+	ipaddr = 127.0.0.1
+#ENV.Y_RADSEC_PROXY_SERVER_PORT
+	port = 2083
+
+	# type can be the same types as for the "listen" section/
+	# e.g. auth, acct, auth+acct, coa
+#ENV.Y_RADSEC_PROXY_TYPE
+	type = auth+acct
+	secret = radsec
+	proto = tcp
+	status_check = none
+
+	#
+	#  This configuration item should be enabled for all
+	#  home_server sections which do TLS.
+	#
+	#  It is only disabled because we are careful about changing
+	#  existing behavior in a stable release.
+	#
+	#  Setting this configuration item to "yes" means that the
+	#  server will be able to gracefully recover if a TLS
+	#  connection is blocking at the network layer.
+	#
+	#  Note that setting "nonblock = yes" is NOT possible for bare
+	#  TCP connections.  RADIUS/TCP should generally be avoided.
+	#
+#	nonblock = yes
+
+	tls {
+		#
+		#  Similarly to HTTP, the client can use Server Name
+		#  Indication to inform the RadSec server as to which
+		#  domain it is requesting.  This selection allows
+		#  multiple sites to exist at the same IP address.
+		#
+		#  For example, an identity provider could host
+		#  multiple sites, but present itself with one public
+		#  IP address.  If the RadSec clients do not use SNI,
+		#  then they must be configured with the certificate
+		#  of the identity provider.
+		#
+		#  When SNI is used, the clients can be configured
+		#  with the certificate of the hosted system that
+		#  they're connecting to.  This ability means that
+		#  there is no need to change certificates when
+		#  changing providers.  In addition, there is no need
+		#  to change the configuration of all RadSec clients
+		#  when the hosting system changes its certifiates.
+		#  Because the hosting system certificates are never used.
+		#
+		#  Instead, each hosted company is responsible for its
+		#  own certificates, and for its own clients.
+		#
+		#  SNI also permits the use of a load balancer such as
+		#  haproxy.  That load balancer can terminate the TLS
+		#  connection, and then use SNI to route the
+		#  underlying RADIUS TCP traffic to a particular host.
+		#
+		#  Note that "hostname" here is only for SNI, and is NOT
+		#  the hostname or IP address we connect to.  For that,
+		#  see "ipaddr", above.
+		#
+	#	hostname = "example.com"
+#ENV.Y_RADSEC_PROXY_KEY_PASSWORD
+		private_key_password = whatever
+#ENV.Y_RADSEC_PROXY_KEY
+		private_key_file = ${certdir}/proxy_client.key
+
+		#  If Private key & Certificate are located in
+		#  the same file, then private_key_file &
+		#  certificate_file must contain the same file
+		#  name.
+		#
+		#  If ca_file (below) is not used, then the
+		#  certificate_file below MUST include not
+		#  only the server certificate, but ALSO all
+		#  of the CA certificates used to sign the
+		#  server certificate.
+#ENV.Y_RADSEC_PROXY_CERT
+		certificate_file = ${certdir}/proxy_client.crt
+
+		#  Trusted Root CA list
+		#
+		#  ALL of the CA's in this list will be trusted
+		#  to issue client certificates for authentication.
+		#
+		#  In general, you should use self-signed
+		#  certificates for 802.1x (EAP) authentication.
+		#  In that case, this CA file should contain
+		#  *one* CA certificate.
+		#
+		#  This parameter is used only for EAP-TLS,
+		#  when you issue client certificates.  If you do
+		#  not use client certificates, and you do not want
+		#  to permit EAP-TLS authentication, then delete
+		#  this configuration item.
+#ENV.Y_RADSEC_PROXY_CA
+		ca_file = ${cadir}/proxy_ca.pem
+
+		#
+		#  For TLS-PSK, the key should be specified
+		#  dynamically, instead of using a hard-coded
+		#  psk_identity and psk_hexphrase.
+		#
+		#  The input to the dynamic expansion will be the PSK
+		#  identity supplied by the client, in the
+		#  TLS-PSK-Identity attribute.  The output of the
+		#  expansion should be a hex string, of no more than
+		#  512 characters.  The string should not be prefixed
+		#  with "0x".  e.g. "abcdef" is OK.  "0xabcdef" is not.
+		#
+	#	psk_query = "%{psksql:select hex(key) from psk_keys where keyid = '%{TLS-PSK-Identity}'}"
+
+		#
+		#  For DH cipher suites to work, you have to
+		#  run OpenSSL to create the DH file first:
+		#
+		#  	openssl dhparam -out certs/dh 1024
+		#
+		dh_file = ${certdir}/dh
+		random_file = /dev/urandom
+
+		#
+		#  The default fragment size is 1K.
+		#  However, TLS can send 64K of data at once.
+		#  It can be useful to set it higher.
+		#
+		fragment_size = 8192
+
+		#  include_length is a flag which is
+		#  by default set to yes If set to
+		#  yes, Total Length of the message is
+		#  included in EVERY packet we send.
+		#  If set to no, Total Length of the
+		#  message is included ONLY in the
+		#  First packet of a fragment series.
+		#
+	#	include_length = yes
+
+		#  Check the Certificate Revocation List
+		#
+		#  1) Copy CA certificates and CRLs to same directory.
+		#  2) Execute 'c_rehash <CA certs&CRLs Directory>'.
+		#    'c_rehash' is OpenSSL's command.
+		#  3) uncomment the line below.
+		#  5) Restart radiusd
+	#	check_crl = yes
+		ca_path = ${cadir}
+
+	       #
+	       #  If check_cert_issuer is set, the value will
+	       #  be checked against the DN of the issuer in
+	       #  the client certificate.  If the values do not
+	       #  match, the certificate verification will fail,
+	       #  rejecting the user.
+	       #
+	       #  In 2.1.10 and later, this check can be done
+	       #  more generally by checking the value of the
+	       #  TLS-Client-Cert-Issuer attribute.  This check
+	       #  can be done via any mechanism you choose.
+	       #
+	#       check_cert_issuer = "/C=GB/ST=Berkshire/L=Newbury/O=My Company Ltd"
+
+	       #
+	       #  If check_cert_cn is set, the value will
+	       #  be xlat'ed and checked against the CN
+	       #  in the client certificate.  If the values
+	       #  do not match, the certificate verification
+	       #  will fail rejecting the user.
+	       #
+	       #  This check is done only if the previous
+	       #  "check_cert_issuer" is not set, or if
+	       #  the check succeeds.
+	       #
+	       #  In 2.1.10 and later, this check can be done
+	       #  more generally by checking the value of the
+	       #  TLS-Client-Cert-Common-Name attribute.  This check
+	       #  can be done via any mechanism you choose.
+	       #
+	#	check_cert_cn = %{User-Name}
+	#
+		# Set this option to specify the allowed
+		# TLS cipher suites.  The format is listed
+		# in "man 1 ciphers".
+		cipher_list = "DEFAULT"
+	}
+
+}
+
+home_server_pool tls {
+		 type = fail-over
+		 home_server = tls
+}
+
+realm tls {
+      auth_pool = tls
+}

@@ -1,23 +1,58 @@
 #!/bin/sh
 
-# LABEL name="ye3radius" version="1.0.0" author="palw3ey" maintainer="palw3ey" email="palw3ey@gmail.com" website="https://github.com/palw3ey/ye3radius" license="MIT" create="20231201" update="20231201"
+# LABEL name="ye3radius" version="2.0.0" author="palw3ey" maintainer="palw3ey" email="palw3ey@gmail.com" website="https://github.com/palw3ey/ye3radius" license="MIT" create="20250202" premiere="20231201" 
 
-# Entrypoint for docker
+# Entrypoint for the container
+
+# to load other env var
+if [[ -f /etc/raddb/bypass_container_env.sh ]] ; then
+
+	# create/update symbolic link for bypass_container_env.sh
+	ln -sfn /etc/raddb/bypass_container_env.sh /etc/profile.d/bypass_container_env.sh
+	
+	# source
+	source /etc/profile.d/bypass_container_env.sh > /dev/null 2>&1		
+fi
+
+# change timezone
+cp /usr/share/zoneinfo/$TZ /etc/localtime
+echo $TZ > /etc/timezone
 
 # ============ [ global variable ] ============
 
+# date format
+vg_date=$(date "+$Y_DATE_FORMAT")
+
+# default language
+vg_default_language="fr_FR"
+
+# image name
+vg_name=ye3radius
+
+# freeradius
 vg_file_base=/etc/raddb
 vg_file_site=$vg_file_base/sites-available/default
+vg_file_radsec_server=$vg_file_base/sites-available/radsec_server
+vg_file_radsec_proxy=$vg_file_base/sites-available/radsec_proxy
 vg_file_sql=$vg_file_base/mods-available/sql
+vg_file_sqlcounter=$vg_file_base/mods-available/sqlcounter
+vg_file_queries=$vg_file_base/mods-config/sql/main/mysql/queries.conf
 vg_file_ca=$vg_file_base/certs/ca.pem 
 vg_file_clients=$vg_file_base/clients.conf
 vg_file_users=$vg_file_base/mods-config/files/authorize
 
 # ============ [ function ] ============
 
-# echo information for docker logs
+# echo information for logs
 function f_log(){
-  echo -e "$(date '+%Y-%m-%d %H:%M:%S') $(hostname) ye3radius: $@"
+
+	# extra info in logs, if debug on
+	vl_log=""
+	if [[ $Y_DEBUG == "yes" ]]; then
+		vl_log="$vg_date $(hostname) $vg_name:"
+	fi
+
+	echo -e "$vl_log $@"
 }
 
 # update env value in config file
@@ -44,15 +79,26 @@ function f_env(){
 	f_log "$vl_log $vl_env"
 }
 
+# to do before container exit
+function f_pre_exit(){
+ 	kill -TERM "$child" 2>/dev/null
+}
+
+# ============ [ timestamp ] ============
+
+echo $vg_date
+
 # ============ [ internationalisation ] ============
 
-if [[ -f /i18n/$Y_LANGUAGE.sh ]]; then
-	f_log "i18n $Y_LANGUAGE"
+# load default language
+source /i18n/$vg_default_language.sh
+
+# override with choosen language
+if [[ $Y_LANGUAGE != $vg_default_language ]] && [[ -f /i18n/$Y_LANGUAGE.sh ]] ; then
 	source /i18n/$Y_LANGUAGE.sh
-else
-	f_log "i18n fr_FR"
-	source /i18n/fr_FR.sh
 fi
+
+f_log "i18n : $Y_LANGUAGE"
 
 # ============ [ unnecessary config ] ============
 
@@ -83,7 +129,7 @@ if [[ $Y_IGNORE_CONFIG == "no" ]]; then
 	sed -i "/#env.Y_TEST_NAS.start/,/#env.Y_TEST_NAS.end/d" $vg_file_clients
 	if [[ $Y_TEST_NAS == "yes" ]]; then
 		f_log "$i_create_test_nas"
-		sed -i "1 i\#env.Y_TEST_NAS.start\nclient $Y_TEST_NAS_ADDRESS {\n    secret = $Y_TEST_NAS_SECRET\n    shortname = ye3radius_client\n}\n#env.Y_TEST_NAS.end" $vg_file_clients
+		sed -i "1 i\#env.Y_TEST_NAS.start\nclient ye3radius_client {\n    ipaddr = $Y_TEST_NAS_ADDRESS\n    secret = $Y_TEST_NAS_SECRET\n    shortname = ye3radius_client\n}\n#env.Y_TEST_NAS.end" $vg_file_clients
 	fi
 	
 	sed -i "/#env.Y_TEST_USER.start/,/#env.Y_TEST_USER.end/d" $vg_file_users
@@ -135,8 +181,8 @@ if [[ $Y_IGNORE_CONFIG == "no" ]]; then
 		done
 		
 		f_log "$i_enable sql mods"
-		ln -sfn $vg_file_sql $vg_file_base/mods-enabled/
-		ln -sfn $vg_file_base/mods-available/sqlcounter $vg_file_base/mods-enabled/
+		ln -sfn $vg_file_sql $vg_file_base/mods-enabled/sql
+		ln -sfn $vg_file_sqlcounter $vg_file_base/mods-enabled/sqlcounter
 		
 	else
 	
@@ -144,6 +190,61 @@ if [[ $Y_IGNORE_CONFIG == "no" ]]; then
 		rm $vg_file_base/mods-enabled/sql > /dev/null 2>&1
 		rm $vg_file_base/mods-enabled/sqlcounter > /dev/null 2>&1
 		
+	fi
+	
+	
+	# ============ [[ configure radsec server ]] ============
+	
+	
+	if [[ $Y_RADSEC_SERVER_ENABLE == "yes" ]]; then
+	
+		f_log "$i_enable radsec_server site"
+		
+		f_env "#ENV.Y_RADSEC_SERVER_PORT" port $Y_RADSEC_SERVER_PORT $vg_file_radsec_server
+		f_env "#ENV.Y_RADSEC_SERVER_TYPE" type $Y_RADSEC_SERVER_TYPE $vg_file_radsec_server
+		f_env "#ENV.Y_RADSEC_SERVER_CA" ca_file $Y_RADSEC_SERVER_CA $vg_file_radsec_server
+		f_env "#ENV.Y_RADSEC_SERVER_KEY" private_key_file $Y_RADSEC_SERVER_KEY $vg_file_radsec_server
+		f_env "#ENV.Y_RADSEC_SERVER_KEY_PASSWORD" private_key_password $Y_RADSEC_SERVER_KEY_PASSWORD $vg_file_radsec_server
+		f_env "#ENV.Y_RADSEC_SERVER_CERT" certificate_file $Y_RADSEC_SERVER_CERT $vg_file_radsec_server
+		f_env "#ENV.Y_RADSEC_SERVER_CLIENT_IPADDR" ipaddr $Y_RADSEC_SERVER_CLIENT_IPADDR $vg_file_radsec_server
+		f_env "#ENV.Y_RADSEC_SERVER_REQUIRE_CERT" require_client_cert $Y_RADSEC_SERVER_REQUIRE_CERT $vg_file_radsec_server
+		
+		ln -sfn $vg_file_radsec_server $vg_file_base/sites-enabled/radsec_server
+	else
+		f_log "$i_disable radsec_server site"
+		rm $vg_file_base/sites-enabled/radsec_server > /dev/null 2>&1
+	fi
+	
+	
+	# ============ [[ configure radsec proxy ]] ============
+	
+	if [[ $Y_RADSEC_PROXY_ENABLE == "yes" ]]; then
+	
+		f_log "$i_enable radsec_proxy site"
+		
+		f_env "#ENV.Y_RADSEC_PROXY_IPADDR" ipaddr $Y_RADSEC_PROXY_IPADDR $vg_file_radsec_proxy
+		f_env "#ENV.Y_RADSEC_PROXY_PORT" port $Y_RADSEC_PROXY_PORT $vg_file_radsec_proxy
+		f_env "#ENV.Y_RADSEC_PROXY_TYPE" type $Y_RADSEC_PROXY_TYPE $vg_file_radsec_proxy
+		f_env "#ENV.Y_RADSEC_PROXY_CA" ca_file $Y_RADSEC_PROXY_CA $vg_file_radsec_proxy
+		f_env "#ENV.Y_RADSEC_PROXY_KEY" private_key_file $Y_RADSEC_PROXY_KEY $vg_file_radsec_proxy
+		f_env "#ENV.Y_RADSEC_PROXY_KEY_PASSWORD" private_key_password $Y_RADSEC_PROXY_KEY_PASSWORD $vg_file_radsec_proxy
+		f_env "#ENV.Y_RADSEC_PROXY_CERT" certificate_file $Y_RADSEC_PROXY_CERT $vg_file_radsec_proxy
+		
+		sed -i '/#env.Y_RADSEC_PROXY_AUTHORIZE.start/,/#env.Y_RADSEC_PROXY_AUTHORIZE.end/ { /^#env.Y_RADSEC_PROXY_AUTHORIZE.start/! { /^#env.Y_RADSEC_PROXY_AUTHORIZE.end/! s/^#//; } }' $vg_file_site
+		sed -i '/#env.Y_RADSEC_PROXY_PREACCT.start/,/#env.Y_RADSEC_PROXY_PREACCT.end/ { /^#env.Y_RADSEC_PROXY_PREACCT.start/! { /^#env.Y_RADSEC_PROXY_PREACCT.end/! s/^#//; } }' $vg_file_site
+		
+		sed -i "/#env.Y_RADSEC_PROXY_CLIENT_IPADDR.start/,/#env.Y_RADSEC_PROXY_CLIENT_IPADDR.end/d" $vg_file_clients
+		sed -i "1 i\#env.Y_RADSEC_PROXY_CLIENT_IPADDR.start\nclient ye3radius_radsec_proxy {\n    ipaddr = $Y_RADSEC_PROXY_CLIENT_IPADDR\n    secret = $Y_RADSEC_PROXY_CLIENT_SECRET\n    shortname = ye3radius_radsec_proxy\n}\n#env.Y_RADSEC_PROXY_CLIENT_IPADDR.end" $vg_file_clients
+	
+		ln -sfn $vg_file_radsec_proxy $vg_file_base/sites-enabled/radsec_proxy
+	else
+		f_log "$i_disable radsec_proxy site"
+		sed -i '/#env.Y_RADSEC_PROXY_AUTHORIZE.start/,/#env.Y_RADSEC_PROXY_AUTHORIZE.end/ { /^#env.Y_RADSEC_PROXY_AUTHORIZE.start/! { /^#env.Y_RADSEC_PROXY_AUTHORIZE.end/! s/^/#/; } }' $vg_file_site
+		sed -i '/#env.Y_RADSEC_PROXY_PREACCT.start/,/#env.Y_RADSEC_PROXY_PREACCT.end/ { /^#env.Y_RADSEC_PROXY_PREACCT.start/! { /^#env.Y_RADSEC_PROXY_PREACCT.end/! s/^/#/; } }' $vg_file_site
+		
+		sed -i "/#env.Y_RADSEC_PROXY_CLIENT_IPADDR.start/,/#env.Y_RADSEC_PROXY_CLIENT_IPADDR.end/d" $vg_file_clients
+		
+		rm $vg_file_base/sites-enabled/radsec_proxy > /dev/null 2>&1
 	fi
 	
 	# ============ [[ enable sites ]] ============
@@ -167,10 +268,22 @@ if [[ ! -f $vg_file_ca ]] || [[ $Y_CERT_KEEP == "no" ]]; then
 	f_log "$i_creating_certificates"
 	
 	cd $vg_file_base/certs/
-	rm -f *.pem *.der *.csr *.crt *.key *.p12 serial* index.txt*
+	find . -type f -name "*.pem" -o -name "*.der" -o -name "*.csr" -o -name "*.crt" -o -name "*.key" -o -name "*.p12" -o -name "serial*" -o -name "index.txt*" ! -name "proxy_*" -exec rm -f {} +
 	$vg_file_base/certs/bootstrap > /dev/null 2>&1
 	chown -R root:radius $vg_file_base/certs
 	chmod 640 $vg_file_base/certs/*.pem
+	
+	if [[ $Y_RADSEC_PROXY_ENABLE == "yes" ]]; then
+		if [[ ! -f $vg_file_base/certs/proxy_client.key ]] ; then
+			cp $vg_file_base/certs/client.key $vg_file_base/certs/proxy_client.key
+		fi
+		if [[ ! -f $vg_file_base/certs/proxy_client.crt ]] ; then
+			cp $vg_file_base/certs/client.crt $vg_file_base/certs/proxy_client.crt
+		fi
+		if [[ ! -f $vg_file_base/certs/proxy_ca.pem ]] ; then
+			cp $vg_file_base/certs/ca.pem $vg_file_base/certs/proxy_ca.pem
+		fi
+	fi
 	
 fi
 
@@ -180,12 +293,28 @@ f_log "$i_start freeradius"
 
 if [[ $Y_DEBUG == "yes" ]]; then
 	f_log "$i_with_debug_option"
-	radiusd -f -d $vg_file_base -X &
+	radiusd -fxxl stdout -d $vg_file_base &
+	child=$!
 else
 	radiusd -f -d $vg_file_base &
+	child=$!
 fi
 
 f_log ":: $i_ready ::"
 
-# keep the server running
-tail -f /dev/null
+# catch SIGTERM
+trap f_pre_exit SIGINT SIGQUIT SIGTERM
+
+# keep the server running,
+if [[ $Y_DEBUG == "yes" ]]; then
+	# by using tail
+	tail -f /dev/null
+else
+	# by waiting child process 
+	wait "$child"
+fi
+
+# before final exit
+f_pre_exit
+
+f_log ":: $i_finished ::"

@@ -3,7 +3,7 @@
 # language : en_GB
 # translation by : palw3ey <palw3ey@gmail.com>
 # create : 20231201
-# update : 20231201
+# update : 20250201
 
 i_apply_configuration="apply configuration"
 i_comment="comment"
@@ -20,3 +20,4 @@ i_set="set"
 i_start="start"
 i_waiting_for_SQL_server="waiting for SQL server..."
 i_with_debug_option="with debug option"
+i_finished="finished"

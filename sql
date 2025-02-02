@@ -2,7 +2,7 @@
 ##
 ## mods-available/sql -- SQL modules
 ##
-##	$Id: 7e9eee03c58bab67206ec10249db79ebbc0baa3c $
+##	$Id: 34ec56509f1160f39b408f409b960fcbc0597c92 $
 
 ######################################################################
 #
@@ -37,7 +37,7 @@ sql {
 	#	sqlite
 	#	mongo
 	#
-	dialect = mysql
+	dialect = "mysql"
 
 	#
 	#  The driver module used to execute the queries.  Since we
@@ -57,7 +57,7 @@ sql {
 	#	rlm_sql_iodbc
 	#	rlm_sql_unixodbc
 	#
-	driver = rlm_sql_mysql
+	driver = "rlm_sql_mysql"
 #	driver = "rlm_sql_${dialect}"
 
 	#
@@ -69,7 +69,7 @@ sql {
 	#
 	sqlite {
 		# Path to the sqlite database
-		filename = "/tmp/freeradius.db"
+		filename = "${db_dir}/freeradius.db"
 
 		# How long to wait for write locks on the database to be
 		# released (in ms) before giving up.
@@ -131,6 +131,11 @@ sql {
 	#		raddb/mods-config/sql/main/mongo/queries.conf
 	#		raddb/mods-config/sql/main/ippool/queries.conf
 	#
+	#	In order to use findAndModify with an aggretation pipleline, make
+	#	sure that you are running MongoDB version 4.2 or greater. FreeRADIUS
+	#	assumes that the paramaters passed to the methods are supported by the
+	#	version of MongoDB which it is connected to.
+	#
 	mongo {
 		#
 		#  The application name to use.
@@ -176,7 +181,7 @@ sql {
 
 	# Database table configuration for everything except Oracle
 #ENV.Y_DB_RADIUS_DB
-	radius_db = radius
+	radius_db = "radius"
 
 	# If you are using Oracle then use this instead
 #	radius_db = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SID=your_sid)))"
@@ -286,6 +291,23 @@ sql {
 		#
 		#  Setting 'max' to MORE than the number of threads means
 		#  that there are more connections than necessary.
+		#
+		#  The setting here should be lower than the maximum
+		#  number of connections allowed by the database.
+		#
+		#  i.e. There is no point in telling FreeRADIUS to use
+		#  64 connections, while the database is limited to 32
+		#  connections.  That configuration will cause the
+		#  server to be "starved" of connections, and it will
+		#  block during normal operations, even when the
+		#  database is largely idle.
+		#
+		#  At the same time, if the database is slow, there is
+		#  no point in increasing "max".  More connections
+		#  will just cause the database to run more slowly.
+		#  The correct fix for a slow database is to fix it, so
+		#  that it responds to FreeRADIUS quickly.
+		#
 		max = ${thread[pool].max_servers}
 
 		#  Spare connections to be left idle
@@ -324,6 +346,26 @@ sql {
 
 	# Set to 'yes' to read radius clients from the database ('nas' table)
 	# Clients will ONLY be read on server startup.
+	#
+	#  A client can be link to a virtual server via the SQL
+	#  module.  This link is done via the following process:
+	#
+	#  If there is no listener in a virtual server, SQL clients
+	#  are added to the global list for that virtual server.
+	#
+	#  If there is a listener, and the first listener does not
+	#  have a "clients=..." configuration item, SQL clients are
+	#  added to the global list.
+	#
+	#  If there is a listener, and the first one does have a
+	#  "clients=..." configuration item, SQL clients are added to
+	#  that list.  The client { ...} ` configured in that list are
+	#  also added for that listener.
+	#
+	#  The only issue is if you have multiple listeners in a
+	#  virtual server, each with a different client list, then
+	#  the SQL clients are added only to the first listener.
+	#
 #ENV.Y_DB_READ_CLIENTS
 	read_clients = yes
 
