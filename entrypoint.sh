@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# LABEL name="ye3radius" version="2.0.0" author="palw3ey" maintainer="palw3ey" email="palw3ey@gmail.com" website="https://github.com/palw3ey/ye3radius" license="MIT" create="20250202" premiere="20231201" 
+# LABEL name="ye3radius" version="2.0.1" author="palw3ey" maintainer="palw3ey" email="palw3ey@gmail.com" website="https://github.com/palw3ey/ye3radius" license="MIT" create="20250203" premiere="20231201" 
 
 # Entrypoint for the container
 

@@ -2,10 +2,10 @@ FROM alpine:latest
 
 LABEL org.opencontainers.image.title="ye3radius"
 
-LABEL org.opencontainers.image.version="2.0.0"
-LABEL org.opencontainers.image.created="2025-02-02T15:00:00-03:00"
-LABEL org.opencontainers.image.revision="20250202"
-LABEL org.opencontainers.image.base.name="ghcr.io/palw3ey/ye3radius:2.0.0"
+LABEL org.opencontainers.image.version="2.0.1"
+LABEL org.opencontainers.image.created="2025-02-03T15:00:00-03:00"
+LABEL org.opencontainers.image.revision="20250203"
+LABEL org.opencontainers.image.base.name="ghcr.io/palw3ey/ye3radius:2.0.1"
 
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.authors="palw3ey"

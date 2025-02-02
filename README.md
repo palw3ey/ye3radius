@@ -7,7 +7,7 @@ The /etc/raddb folder is persistent.
 # Simple usage
 
 ```bash
-docker run -dt --name myradius -e Y_TEST_NAS=yes -e Y_TEST_USER=yes docker.io/palw3ey/ye3radius
+docker run -dt --name myradius -e Y_TEST_NAS=yes -e Y_TEST_USER=yes -p 1812-1813:1812-1813/udp docker.io/palw3ey/ye3radius
 ```
 
 # Usage with MariaDB 
@@ -182,6 +182,7 @@ docker run -dt --name myradius \
 	-e Y_DB_ENABLE=yes -e Y_DB_SERVER=example.lan -e Y_DB_PORT=3306 -e Y_DB_TLS_REQUIRED=no \
 	-e Y_DB_LOGIN=radiusDBuser -e Y_DB_PASSWORD=radiusDBpassword \
 	-e Y_RADSEC_SERVER_ENABLE=yes \
+	-p 2083:2083/tcp \
 	palw3ey/ye3radius
 ```
 
@@ -192,14 +193,19 @@ docker run -dt --name myradius \
 (docker exec -it myradius cat /etc/raddb/certs/client.crt) > client.crt
 (docker exec -it myradius cat /etc/raddb/certs/ca.pem) > ca.pem
 
+# get the ip
+myradius_ip=$(docker inspect --format='{{.NetworkSettings.IPAddress}}' myradius)
+echo $myradius_ip
+
 # create the Radius Proxy with the previous files
 docker run -dt --name myradius_proxy \
+	-p 1812-1813:1812-1813/udp \
 	-e Y_RADSEC_PROXY_ENABLE=yes \
-	-e Y_RADSEC_PROXY_IPADDR=RemoteRadSecServerIP \
+	-e Y_RADSEC_PROXY_IPADDR=$myradius_ip \
 	-e Y_RADSEC_PROXY_CLIENT_SECRET=strongProxySecret \
-	-v ~/client.key:/etc/raddb/certs/proxy_client.key \
-	-v ~/client.crt:/etc/raddb/certs/proxy_client.crt \
-	-v ~/ca.pem:/etc/raddb/certs/proxy_ca.pem \
+	-v ~/client.key:/etc/raddb/certs/proxy_client.key:ro \
+	-v ~/client.crt:/etc/raddb/certs/proxy_client.crt:ro \
+	-v ~/ca.pem:/etc/raddb/certs/proxy_ca.pem:ro \
 	docker.io/palw3ey/ye3radius 
 ```
 
@@ -208,13 +214,38 @@ docker run -dt --name myradius_proxy \
 # install freeradius-utils
 sudo apt install freeradius-utils
 
-radclient -x RadiusProxyIP:1812 auth strongProxySecret <<EOF
+# get the ip
+myradius_proxy_ip=$(docker inspect --format='{{.NetworkSettings.IPAddress}}' myradius_proxy)
+echo $myradius_proxy_ip
+
+# test authentication
+radclient -x $myradius_proxy_ip:1812 auth strongProxySecret <<EOF
 User-Name = "tux"
 User-Password = "strongPassword"
 NAS-IP-Address = 192.168.1.2
-Framed-IP-Address = 192.168.1.3
 EOF
+
+# verify authentication
+mariadb --host=$mymariadb_ip --port=3306 --user=radiusDBuser --password=radiusDBpassword --database=radius -e "SELECT username, packet_src_ip_address, authdate FROM radpostauth ORDER BY id DESC LIMIT 2;"
+
+# test accounting
+radclient -x $myradius_proxy_ip:1813 acct strongProxySecret <<EOF
+User-Name = "tux"
+NAS-IP-Address = 192.168.1.2
+Framed-IP-Address = 192.168.1.3
+Acct-Status-Type = Start
+Acct-Session-Id = 123456789
+EOF
+
+# verify accounting
+mariadb --host=$mymariadb_ip --port=3306 --user=radiusDBuser --password=radiusDBpassword --database=radius -e "SELECT radacctid, acctsessionid, acctstarttime, framedipaddress FROM radacct ORDER BY radacctid DESC LIMIT 2;"
 ```
+
+- Test on Windows
+[Download NTRadPing](https://community.microfocus.com/cfs-file/__key/communityserver-wikis-components-files/00-00-00-01-70/ntradping.zip)
+
+- Manage radius database via a frontend
+[ye3radius-frontend by Kilowatt-W](https://github.com/Kilowatt-W/ye3radius-frontend)
 
 # GNS3
 
@@ -314,12 +345,15 @@ docker run -dt --name my_customized_radius ye3radius
 
 | name | version |
 | :- |:- |
-|ye3radius | 2.0.0 |
+|ye3radius | 2.0.1 |
 |radiusd | 3.0.27 |
 |alpine | 3.21.2 |
 
 # Changelog
 
+## [2.0.1] - 2025-02-02
+### Fixed
+- add acct_pool in radsec_proxy site
 ## [2.0.0] - 2025-02-02
 ### Added
 - Ease of configuration for RadSec and Radius Proxy 
