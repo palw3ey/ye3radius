@@ -322,7 +322,7 @@ docker run -dt --name my_customized_radius ye3radius
 
 ## [2.0.0] - 2025-02-02
 ### Added
-- Ease of configuration fo RadSec and Radius Proxy 
+- Ease of configuration for RadSec and Radius Proxy 
 - new package : tini tzdata ca-certificates curl
 - include new source file in the repo : queries.conf and sqlcounter
 - ability to change timezone and date format via environment variables
